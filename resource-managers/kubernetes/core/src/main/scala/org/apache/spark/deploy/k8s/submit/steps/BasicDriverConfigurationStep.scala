@@ -18,7 +18,7 @@ package org.apache.spark.deploy.k8s.submit.steps
 
 import scala.collection.JavaConverters._
 
-import io.fabric8.kubernetes.api.model.{ContainerBuilder, EnvVarBuilder, EnvVarSourceBuilder, PodBuilder, QuantityBuilder}
+import io.fabric8.kubernetes.api.model._
 
 import org.apache.spark.{SparkConf, SparkException}
 import org.apache.spark.deploy.k8s.Config._
@@ -49,6 +49,8 @@ private[spark] class BasicDriverConfigurationStep(
   private val driverContainerImage = sparkConf
     .get(DRIVER_CONTAINER_IMAGE)
     .getOrElse(throw new SparkException("Must specify the driver container image"))
+
+  private val imagePullSecrets = sparkConf.get(IMAGE_PULL_SECRETS)
 
   // CPU settings
   private val driverCpuCores = sparkConf.getOption("spark.driver.cores").getOrElse("1")
@@ -136,6 +138,8 @@ private[spark] class BasicDriverConfigurationStep(
       .addToArgs("driver")
       .build()
 
+    val parsedImagePullSecrets = KubernetesUtils.parseImagePullSecrets(imagePullSecrets)
+
     val baseDriverPod = new PodBuilder(driverSpec.driverPod)
       .editOrNewMetadata()
         .withName(driverPodName)
@@ -145,6 +149,7 @@ private[spark] class BasicDriverConfigurationStep(
       .withNewSpec()
         .withRestartPolicy("Never")
         .withNodeSelector(nodeSelector.asJava)
+        .withImagePullSecrets(parsedImagePullSecrets.asJava)
         .endSpec()
       .build()
 

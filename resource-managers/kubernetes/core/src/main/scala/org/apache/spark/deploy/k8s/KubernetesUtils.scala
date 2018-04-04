@@ -18,7 +18,7 @@ package org.apache.spark.deploy.k8s
 
 import java.io.File
 
-import io.fabric8.kubernetes.api.model.{Container, Pod, PodBuilder}
+import io.fabric8.kubernetes.api.model.{Container, Pod, PodBuilder, LocalObjectReference}
 
 import org.apache.spark.SparkConf
 import org.apache.spark.util.Utils
@@ -37,6 +37,17 @@ private[spark] object KubernetesUtils {
       sparkConf: SparkConf,
       prefix: String): Map[String, String] = {
     sparkConf.getAllWithPrefix(prefix).toMap
+  }
+
+  /**
+   * Parses comma-separated list of imagePullSecrets into K8s-understandable format
+   */
+  def parseImagePullSecrets(imagePullSecrets: Option[String]): List[LocalObjectReference] = {
+    imagePullSecrets match {
+      case Some(secretsCommaSeparated) =>
+        secretsCommaSeparated.split(',').map(_.trim).map(new LocalObjectReference(_)).toList
+      case None => Nil
+    }
   }
 
   def requireNandDefined(opt1: Option[_], opt2: Option[_], errMessage: String): Unit = {
